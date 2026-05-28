@@ -269,7 +269,7 @@ var shifts=[];
 var settings={monthly:31100,weekHours:25,bonus:105,email:''};
 var MONTHS=['jan','feb','mar','apr','maj','jun','jul','aug','sep','okt','nov','dec'];
 var DAYS=['søndag','mandag','tirsdag','onsdag','torsdag','fredag','lørdag'];
-var API='http://46.225.161.88:3030';
+var API='/nph-api';
 
 function apiGet(url,cb){
   fetch(API+url).then(function(r){return r.json();}).then(cb).catch(function(){cb(null);});
