@@ -270,6 +270,7 @@ var settings={monthly:31100,weekHours:25,bonus:105,email:''};
 var MONTHS=['jan','feb','mar','apr','maj','jun','jul','aug','sep','okt','nov','dec'];
 var DAYS=['søndag','mandag','tirsdag','onsdag','torsdag','fredag','lørdag'];
 var API='/nph-api';
+var START_DATE = '2026-04-01'; // Betinnas ansættelsesdato
 
 function apiGet(url,cb){
   fetch(API+url).then(function(r){return r.json();}).then(cb).catch(function(){cb(null);});
@@ -294,7 +295,20 @@ function saveSettings(){
   renderAll();toast('Indstillinger gemt');
 }
 function hourlyRate(){return settings.monthly/(settings.weekHours*52/12);}
-function periodNorm(){return settings.weekHours*52/12;}
+function periodNorm(periodStart, periodEnd) {
+  var fullNorm = settings.weekHours * 52 / 12;
+  if (!periodStart || !periodEnd) return fullNorm;
+  var start = new Date(START_DATE);
+  // Hvis startdato er inden for denne periode, beregn forholdsmæssigt
+  if (start > periodStart && start <= periodEnd) {
+    var totalDays = (periodEnd - periodStart) / 86400000 + 1;
+    var workedDays = (periodEnd - start) / 86400000 + 1;
+    return Math.round(fullNorm * workedDays / totalDays * 10) / 10;
+  }
+  // Hvis startdato er efter periodens slutning – norm er 0
+  if (start > periodEnd) return 0;
+  return fullNorm;
+}
 function setDayLabel(dateVal,elId){
   if(!dateVal)return;
   var d=new Date(dateVal+'T12:00:00'),dn=DAYS[d.getDay()];
@@ -357,7 +371,7 @@ function renderAll(){
   var p=getPeriod(new Date());
   document.getElementById('period-lbl').textContent=fmtDate(p.start)+' – '+fmtDate(p.end);
   var ps=shifts.filter(function(s){return s.date>=p.start.toISOString().slice(0,10)&&s.date<=p.end.toISOString().slice(0,10);});
-  var totalH=ps.reduce(function(a,s){return a+s.hours;},0),extraH=ps.reduce(function(a,s){return a+s.extra;},0),norm=periodNorm();
+  var totalH=ps.reduce(function(a,s){return a+s.hours;},0),extraH=ps.reduce(function(a,s){return a+s.extra;},0),norm=periodNorm(p.start,p.end);
   var pct=Math.min(Math.round(totalH/norm*100),999);
   document.getElementById('s-worked').textContent=totalH.toFixed(1).replace('.',',')+' t';
   document.getElementById('s-norm-sub').textContent='norm: '+norm.toFixed(1).replace('.',',')+' t';
@@ -395,7 +409,7 @@ function renderAll(){
     pkeys.forEach(function(key){
       var per=pmap[key],end=new Date(per.start);end.setMonth(end.getMonth()+1);end.setDate(15);
       var th=per.list.reduce(function(a,s){return a+s.hours;},0),te=per.list.reduce(function(a,s){return a+s.extra;},0);
-      var bkr=Math.round(te*settings.bonus),tot=settings.monthly+bkr,dh=th-periodNorm();
+      var bkr=Math.round(te*settings.bonus),tot=settings.monthly+bkr,dh=th-periodNorm(per.start,end);
       var dc=dh>0?'orange':dh<-2?'red':'green',isPast=end<=today,pl=fmtDate(per.start)+' – '+fmtDate(end);
       mhtml+='<div style="border-bottom:1px solid var(--border);padding:14px 0;">';
       mhtml+='<div style="font-family:\'DM Serif Display\',serif;font-size:15px;color:var(--nph);margin-bottom:10px;display:flex;justify-content:space-between;align-items:center;"><span>'+pl+'</span><span style="background:'+(isPast?'var(--green-bg)':'#fef3ec')+';color:'+(isPast?'var(--green)':'var(--accent)')+';font-size:11px;font-weight:600;padding:2px 8px;border-radius:10px;">'+(isPast?'Afsluttet':'Igangværende')+'</span></div>';
