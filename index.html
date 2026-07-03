@@ -523,8 +523,7 @@ function sendReport(key){
   });
   if(!hasEx)body+='Ingen tillægstimer i denne periode.\n\n';
   body+='─────────────────────────────\n';
-  body+='Tillægstimer i alt (periode): '+te.toFixed(1).replace('.',',')+' t\n';
-  body+='Samlede overtimer i alt:      '+displayOT.toFixed(1).replace('.',',')+' t\n\n';
+  body+='Tillægstimer i alt: '+te.toFixed(1).replace('.',',')+' t\n\n';
   body+='Venlig hilsen\nBetinna';
   var mailto='mailto:'+encodeURIComponent(settings.email)+'?subject='+encodeURIComponent(subj)+'&body='+encodeURIComponent(body);
   try{window.open(mailto,'_self');}catch(e){window.location.href=mailto;}
