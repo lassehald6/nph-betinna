@@ -208,6 +208,11 @@ tr:last-child td{border-bottom:none;}
     <input type="file" id="import-input" accept=".json" style="display:none;" onchange="importData(event)">
   </div>
   <div class="card">
+    <div class="card-title">🔄 Opdatering</div>
+    <p style="font-size:13px;color:var(--muted);margin-bottom:12px;">Tryk her hvis appen ikke viser de seneste ændringer.</p>
+    <button class="btn" onclick="clearCache()" style="background:#2a5a72;">🔄 Ryd cache og genindlæs</button>
+  </div>
+  <div class="card">
     <div class="card-title">🗑 Nulstil data</div>
     <button class="btn danger" onclick="clearAll()">Slet alle vagter</button>
   </div>
@@ -603,6 +608,15 @@ function showTab(id,btn){
   document.querySelectorAll('nav button').forEach(function(b){b.classList.remove('active');});
   document.getElementById('tab-'+id).classList.add('active');btn.classList.add('active');
   loadAndRender();
+}
+function clearCache(){
+  if('caches' in window){
+    caches.keys().then(function(names){
+      names.forEach(function(name){ caches.delete(name); });
+    });
+  }
+  toast('Cache ryddet – genindlæser...');
+  setTimeout(function(){ window.location.reload(true); }, 800);
 }
 function clearAll(){
   if(!confirm('Slet alle vagter permanent?'))return;
