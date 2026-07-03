@@ -120,10 +120,10 @@ tr:last-child td{border-bottom:none;}
         <div class="stat-value" id="s-extra">0,0 t</div>
         <div class="stat-sub">kl. 16–07:30</div>
       </div>
-      <div class="stat-box">
-        <div class="stat-label">Grundløn</div>
-        <div class="stat-value" id="s-base">31.100</div>
-        <div class="stat-sub">kr (fast)</div>
+      <div class="stat-box" onclick="openOvertimeModal()" style="cursor:pointer;border:1.5px dashed var(--border);">
+        <div class="stat-label">Overtimer i alt ✏️</div>
+        <div class="stat-value" id="s-overtime">0,0 t</div>
+        <div class="stat-sub">tryk for at redigere</div>
       </div>
       <div class="stat-box">
         <div class="stat-label">Tillæg</div>
@@ -264,7 +264,80 @@ tr:last-child td{border-bottom:none;}
   </div>
 </div>
 
+<!-- OVERTIMER MODAL -->
+<div id="overtime-overlay" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:100;align-items:flex-end;justify-content:center;" onclick="if(event.target===this)closeOvertimeModal()">
+  <div style="background:#fff;border-radius:20px 20px 0 0;padding:24px 20px 40px;width:100%;max-width:600px;" onclick="event.stopPropagation()">
+    <div style="font-family:'DM Serif Display',serif;font-size:18px;color:var(--nph);margin-bottom:8px;display:flex;justify-content:space-between;align-items:center;">
+      ⏱ Overtimer i alt
+      <button onclick="closeOvertimeModal()" style="background:none;border:none;font-size:24px;color:var(--muted);cursor:pointer;line-height:1;">×</button>
+    </div>
+    <p style="font-size:13px;color:var(--muted);margin-bottom:16px;">Samlet antal overskydende timer på tværs af alle perioder. Kan justeres manuelt.</p>
+    <div style="display:flex;align-items:center;gap:12px;margin-bottom:20px;">
+      <input type="number" id="overtime-input" step="0.25" style="flex:1;height:54px;border:1.5px solid var(--border);border-radius:10px;background:var(--bg);font-family:'DM Sans',sans-serif;font-size:24px;font-weight:700;padding:0 16px;outline:none;text-align:center;" value="0">
+      <span style="font-size:18px;color:var(--muted);">timer</span>
+    </div>
+    <p style="font-size:12px;color:var(--muted);margin-bottom:16px;">Auto-beregnet fra vagter: <strong id="overtime-auto">0,0 t</strong> — du kan overskrive med din egen værdi.</p>
+    <button class="btn" onclick="saveOvertime()">Gem overtimer</button>
+    <button class="btn" onclick="resetOvertime()" style="background:transparent;color:var(--muted);border:1.5px solid var(--border);margin-top:8px;">Nulstil til auto-beregnet</button>
+  </div>
+</div>
 <script>
+// ── OVERTIME ──────────────────────────────────────────────────
+var manualOvertime = null;
+
+function buildPeriodMap() {
+  var pmap = {};
+  shifts.forEach(function(s) {
+    var d = new Date(s.date+'T12:00:00');
+    var per = getPeriod(d);
+    var key = periodKey(per.start);
+    if (!pmap[key]) pmap[key] = { start: per.start, list: [] };
+    pmap[key].list.push(s);
+  });
+  return pmap;
+}
+
+function calcAutoOvertime() {
+  var pmap = buildPeriodMap();
+  var total = 0;
+  Object.keys(pmap).forEach(function(key) {
+    var per = pmap[key];
+    var end = new Date(per.start); end.setMonth(end.getMonth()+1); end.setDate(15);
+    var th = per.list.reduce(function(a,s){ return a+s.hours; }, 0);
+    var norm = periodNorm(per.start, end);
+    var diff = th - norm;
+    if (diff > 0) total += diff;
+  });
+  return Math.round(total * 4) / 4;
+}
+
+function openOvertimeModal() {
+  var auto = calcAutoOvertime();
+  document.getElementById('overtime-auto').textContent = auto.toFixed(1).replace('.',',') + ' t';
+  var val = manualOvertime !== null ? manualOvertime : auto;
+  document.getElementById('overtime-input').value = val;
+  document.getElementById('overtime-overlay').style.display = 'flex';
+}
+function closeOvertimeModal() {
+  document.getElementById('overtime-overlay').style.display = 'none';
+}
+function saveOvertime() {
+  manualOvertime = parseFloat(document.getElementById('overtime-input').value) || 0;
+  apiPost('/settings', { overtimeHours: manualOvertime });
+  localStorage.setItem('nph_overtime', manualOvertime);
+  closeOvertimeModal();
+  renderAll();
+  toast('✓ Overtimer gemt');
+}
+function resetOvertime() {
+  manualOvertime = null;
+  localStorage.removeItem('nph_overtime');
+  apiPost('/settings', { overtimeHours: '' });
+  closeOvertimeModal();
+  renderAll();
+  toast('Nulstillet til auto');
+}
+
 var shifts=[];
 var settings={monthly:31100,weekHours:25,bonus:105,email:''};
 var MONTHS=['jan','feb','mar','apr','maj','jun','jul','aug','sep','okt','nov','dec'];
@@ -376,7 +449,9 @@ function renderAll(){
   document.getElementById('s-worked').textContent=totalH.toFixed(1).replace('.',',')+' t';
   document.getElementById('s-norm-sub').textContent='norm: '+norm.toFixed(1).replace('.',',')+' t';
   document.getElementById('s-extra').textContent=extraH.toFixed(1).replace('.',',')+' t';
-  document.getElementById('s-base').textContent=Math.round(settings.monthly).toLocaleString('da-DK');
+  var autoOT = calcAutoOvertime();
+  var displayOT = manualOvertime !== null ? manualOvertime : autoOT;
+  document.getElementById('s-overtime').textContent = displayOT.toFixed(1).replace('.',',') + ' t';
   document.getElementById('s-bonus').textContent=Math.round(extraH*settings.bonus).toLocaleString('da-DK');
   document.getElementById('prog-pct').textContent=pct+'%';
   var bar=document.getElementById('prog-bar');bar.style.width=Math.min(pct,100)+'%';
@@ -427,11 +502,12 @@ function renderAll(){
 }
 function sendReport(key){
   if(!settings.email){toast('⚠️ Angiv en e-mail under Indstillinger');return;}
-  var pmap={};
-  shifts.forEach(function(s){var d=new Date(s.date+'T12:00:00'),per=getPeriod(d),k=periodKey(per.start);if(!pmap[k])pmap[k]={start:per.start,list:[]};pmap[k].list.push(s);});
+  var pmap=buildPeriodMap();
   var per=pmap[key];if(!per)return;
   var end=new Date(per.start);end.setMonth(end.getMonth()+1);end.setDate(15);
   var pl=fmtDate(per.start)+' – '+fmtDate(end),te=per.list.reduce(function(a,s){return a+s.extra;},0);
+  var autoOT = calcAutoOvertime();
+  var displayOT = manualOvertime !== null ? manualOvertime : autoOT;
   var sorted=[];for(var i=0;i<per.list.length;i++)sorted.push(per.list[i]);
   sorted.sort(function(a,b){return a.date.localeCompare(b.date);});
   var subj='Tillægstimer '+pl+' – Betinna';
@@ -445,7 +521,10 @@ function sendReport(key){
     body+='\n';
   });
   if(!hasEx)body+='Ingen tillægstimer i denne periode.\n\n';
-  body+='─────────────────────────────\nTillægstimer i alt: '+te.toFixed(1).replace('.',',')+' t\n\nVenlig hilsen\nBetinna';
+  body+='─────────────────────────────\n';
+  body+='Tillægstimer i alt (periode): '+te.toFixed(1).replace('.',',')+' t\n';
+  body+='Samlede overtimer i alt:      '+displayOT.toFixed(1).replace('.',',')+' t\n\n';
+  body+='Venlig hilsen\nBetinna';
   var mailto='mailto:'+encodeURIComponent(settings.email)+'?subject='+encodeURIComponent(subj)+'&body='+encodeURIComponent(body);
   try{window.open(mailto,'_self');}catch(e){window.location.href=mailto;}
   toast('📧 Mail-app åbnes...');
@@ -550,6 +629,7 @@ window.onload=function(){
       settings.weekHours=parseFloat(data.weekHours)||25;
       settings.bonus=parseFloat(data.bonus)||105;
       settings.email=data.email||'';
+      if(data.overtimeHours!==undefined&&data.overtimeHours!=='') manualOvertime=parseFloat(data.overtimeHours);
     }
     loadAndRender();
   });
