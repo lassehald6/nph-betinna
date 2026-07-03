@@ -88,10 +88,6 @@ tr:last-child td{border-bottom:none;}
 </head>
 <body>
 
-<div id="install-banner" style="display:none;background:#c8855a;color:white;text-align:center;padding:10px 16px;font-size:13px;font-weight:500;">
-  📲 Tryk <strong>Del</strong> → <strong>"Føj til hjemmeskærm"</strong> for app-ikon
-  <button onclick="document.getElementById('install-banner').style.display='none'" style="background:none;border:none;color:white;font-size:18px;margin-left:8px;cursor:pointer;">×</button>
-</div>
 
 <header>
   <h1>Nordens Privathospital</h1>
@@ -197,11 +193,11 @@ tr:last-child td{border-bottom:none;}
     <div class="set-row"><span>Tillæg pr. time (kr)</span><input type="number" id="set-bonus" value="105" onchange="saveSettings()"></div>
     <div class="set-row"><span style="color:var(--muted);font-size:13px;">Beregnet timeløn</span><span id="set-hourly-disp" style="font-weight:600;">–</span></div>
   </div>
-  <div class="card">
+    <div class="card">
     <div class="card-title">📧 Opgørelses-mail</div>
     <div class="set-row" style="flex-direction:column;align-items:flex-start;gap:6px;">
-      <span style="font-size:13px;color:var(--muted);">Send månedlig opgørelse til</span>
-      <input type="email" id="set-email" placeholder="f.eks. lon@nph.dk" style="width:100%;height:44px;border:1.5px solid var(--border);border-radius:10px;background:var(--bg);font-family:'DM Sans',sans-serif;font-size:15px;padding:0 12px;outline:none;-webkit-appearance:none;" oninput="saveSettings()">
+      <span style="font-size:13px;color:var(--muted);">Send månedlig opgørelse til (Ole)</span>
+      <input type="email" id="set-email" placeholder="f.eks. ole@nph.dk" style="width:100%;height:44px;border:1.5px solid var(--border);border-radius:10px;background:var(--bg);font-family:'DM Sans',sans-serif;font-size:15px;padding:0 12px;outline:none;-webkit-appearance:none;" oninput="saveSettings()">
     </div>
   </div>
   <div class="card">
@@ -494,7 +490,7 @@ function renderAll(){
       mhtml+='<div class="sum-row"><span class="sum-label">Grundløn (fast)</span><span>'+settings.monthly.toLocaleString('da-DK')+' kr</span></div>';
       mhtml+='<div class="sum-row"><span class="sum-label">Tillæg ('+settings.bonus+' kr × '+te.toFixed(1).replace('.',',')+' t)</span><span>'+bkr.toLocaleString('da-DK')+' kr</span></div>';
       mhtml+='<div class="sum-row"><span>Estimeret udbetaling</span><span style="font-size:20px;color:var(--nph);font-weight:700;">'+tot.toLocaleString('da-DK')+' kr</span></div>';
-      mhtml+='<button onclick="sendReport(\''+key+'\')" style="margin-top:12px;width:100%;background:var(--nph);color:white;border:none;border-radius:12px;padding:13px;font-family:\'DM Sans\',sans-serif;font-size:14px;font-weight:600;cursor:pointer;">📧 Send opgørelse'+(settings.email?' til '+settings.email:'')+'</button>';
+      mhtml+='<button onclick="sendReport(\''+key+'\')" style="margin-top:12px;width:100%;background:var(--nph);color:white;border:none;border-radius:12px;padding:13px;font-family:\'DM Sans\',sans-serif;font-size:14px;font-weight:600;cursor:pointer;">📧 Send opgørelse til Ole'+(settings.email?' ('+settings.email+')':'')+'</button>';
       mhtml+='</div>';
     });
     mEl.innerHTML=mhtml;
@@ -615,8 +611,6 @@ function clearAll(){
 }
 function toast(msg){var t=document.getElementById('toast');t.textContent=msg;t.classList.add('show');setTimeout(function(){t.classList.remove('show');},2400);}
 window.onload=function(){
-  var isStandalone=window.navigator.standalone||window.matchMedia('(display-mode: standalone)').matches;
-  if(!isStandalone)document.getElementById('install-banner').style.display='block';
   var today=new Date().toISOString().slice(0,10);
   document.getElementById('inp-date').value=today;
   onDateChange();
